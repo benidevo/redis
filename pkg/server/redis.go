@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 )
 
 type Redis struct {
@@ -13,6 +12,15 @@ type Redis struct {
 	listener net.Listener
 }
 
+// NewRedis creates a new Redis server instance.
+//
+// It initializes a Redis server with the specified host and port.
+//
+// Parameters:
+//   - host: The host address to listen on (e.g., "0.0.0.0")
+//   - port: The port number to listen on (e.g., 6379)
+//
+// Returns a new Redis server instance.
 func NewRedis(host string, port int) *Redis {
 	return &Redis{
 		host,
@@ -21,6 +29,16 @@ func NewRedis(host string, port int) *Redis {
 	}
 }
 
+// Redis represents a Redis server instance.
+// It handles TCP connections and implements basic Redis functionality.
+//
+// The server listens on the specified host and port, accepting client connections
+// and processing Redis protocol commands.
+//
+// Example usage:
+//
+//	redis := server.NewRedis("0.0.0.0", 6379)
+//	redis.Run()
 func (r *Redis) Run() error {
 	address := fmt.Sprintf("%s:%d", r.host, r.port)
 
@@ -31,24 +49,32 @@ func (r *Redis) Run() error {
 	}
 	r.listener = listener
 
-	connection, err := r.listener.Accept()
-	if err != nil {
-		log.Printf("Error accepting connection: %v", err)
-		os.Exit(1)
+	for {
+		connection, err := r.listener.Accept()
+		if err != nil {
+			log.Printf("Error accepting connection: %v", err)
+			continue
+		}
+		go r.handleConnection(connection)
 	}
+}
+
+func (r *Redis) handleConnection(connection net.Conn) {
+	defer connection.Close()
 
 	for {
 		buffer := make([]byte, 1024)
 		_, err := connection.Read(buffer)
+
 		if err != nil {
 			log.Printf("Error reading from connection: %v", err)
-			continue
+			return
 		}
 
 		_, err = connection.Write([]byte("+PONG\r\n"))
 		if err != nil {
 			log.Printf("Error writing to connection: %v", err)
-			continue
+			return
 		}
 	}
 }
