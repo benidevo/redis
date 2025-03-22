@@ -4,8 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net"
+
+	"github.com/codecrafters-io/redis-starter-go/internal/command"
+	"github.com/codecrafters-io/redis-starter-go/pkg/protocol"
 )
 
+// Redis represents a Redis server instance.
+// It handles TCP connections and implements basic Redis functionality.
 type Redis struct {
 	host     string
 	port     int
@@ -45,6 +50,7 @@ func (r *Redis) Run() error {
 	var err error
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
+		log.Printf("Error listening on %s: %v", address, err)
 		return err
 	}
 	r.listener = listener
@@ -71,7 +77,16 @@ func (r *Redis) handleConnection(connection net.Conn) {
 			return
 		}
 
-		_, err = connection.Write([]byte("+PONG\r\n"))
+		query := protocol.NewQuery()
+		err = query.Deserialize(buffer)
+		if err != nil {
+			log.Printf("Error deserializing query: %v", err)
+			return
+		}
+
+		result := command.Processor(query)
+
+		_, err = connection.Write(result.Serialize())
 		if err != nil {
 			log.Printf("Error writing to connection: %v", err)
 			return
