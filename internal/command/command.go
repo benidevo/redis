@@ -1,12 +1,18 @@
 package command
 
-import "github.com/codecrafters-io/redis-starter-go/pkg/protocol"
+import (
+	"github.com/codecrafters-io/redis-starter-go/internal/store"
+	"github.com/codecrafters-io/redis-starter-go/pkg/protocol"
+)
 
 const (
 	PING = "PING"
 	ECHO = "ECHO"
 	OK   = "OK"
 	ERR  = "ERR"
+	SET  = "SET"
+	GET  = "GET"
+	DEL  = "DEL"
 )
 
 var ALLOWED_COMANDS = map[string]struct{}{
@@ -48,7 +54,21 @@ func Processor(query *protocol.Query) *protocol.Result {
 			return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'echo' command")
 		}
 		return protocol.NewResult(protocol.BulkStringType, query.Args[0])
-
+	case SET:
+		if len(query.Args) != 2 {
+			return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'set' command")
+		}
+		key := query.Args[0]
+		value := query.Args[1]
+		store.Set(key, value)
+		return protocol.NewResult(protocol.SimpleStringType, OK)
+	case GET:
+		if len(query.Args) != 1 {
+			return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'get' command")
+		}
+		key := query.Args[0]
+		value := store.Get(key)
+		return protocol.NewResult(protocol.BulkStringType, value)
 	default:
 		return protocol.NewResult(protocol.ErrorType, "ERR unknown command")
 	}

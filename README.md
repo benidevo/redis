@@ -13,7 +13,7 @@ This project is an implementation of a Redis server in Go, designed to help unde
 The implementation follows a phased approach:
 
 - [x] Basic TCP server with PING command
-- [ ] RESP protocol implementation
+- [x] RESP protocol implementation
 - [ ] Basic string operations (GET, SET)
 - [ ] Data structures (Lists, Sets, etc.)
 - [ ] Key expiration (TTL)
