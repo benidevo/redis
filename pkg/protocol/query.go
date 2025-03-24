@@ -1,6 +1,9 @@
 package protocol
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	SimpleString = '+'
@@ -52,7 +55,7 @@ func (q *Query) Deserialize(data []byte) error {
 
 	switch data[0] {
 	case SimpleString:
-		q.Command = string(data[1 : len(data)-2])
+		q.Command = strings.ToUpper(string(data[1 : len(data)-2]))
 		q.Args = []string{}
 		return nil
 
@@ -60,7 +63,7 @@ func (q *Query) Deserialize(data []byte) error {
 		return fmt.Errorf("received error: %s", string(data[1:len(data)-2]))
 
 	case Integer:
-		q.Command = string(data[1 : len(data)-2])
+		q.Command = strings.ToUpper(string(data[1 : len(data)-2]))
 		q.Args = []string{}
 		return nil
 
@@ -96,7 +99,7 @@ func (q *Query) Deserialize(data []byte) error {
 			return fmt.Errorf("malformed bulk string: insufficient data")
 		}
 
-		q.Command = string(data[start : start+length])
+		q.Command = strings.ToUpper(string(data[start : start+length]))
 		q.Args = []string{}
 		return nil
 
@@ -175,7 +178,7 @@ func (q *Query) Deserialize(data []byte) error {
 		}
 
 		if len(elements) > 0 {
-			q.Command = elements[0]
+			q.Command = strings.ToUpper(elements[0])
 			q.Args = elements[1:]
 		} else {
 			q.Command = ""

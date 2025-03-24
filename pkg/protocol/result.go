@@ -63,6 +63,9 @@ func (r *Result) Serialize() []byte {
 		return []byte("-" + r.Value.(string) + "\r\n")
 	case BulkStringType:
 		str := r.Value.(string)
+		if str == "" {
+			return []byte("$-1\r\n")
+		}
 		return fmt.Appendf(nil, "$%d\r\n%s\r\n", len(str), str)
 	}
 	return nil
