@@ -2,7 +2,6 @@ package command
 
 import (
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
@@ -55,56 +54,64 @@ func Processor(query *protocol.Query) *protocol.Result {
 		return protocol.NewResult(protocol.SimpleStringType, "PONG")
 	case ECHO:
 		if len(query.Args) == 0 {
-			return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'echo' command")
+			return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'ECHO' command")
 		}
 		return protocol.NewResult(protocol.BulkStringType, query.Args[0])
 	case SET:
-		if len(query.Args) < 2 {
-			return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'set' command")
-		}
-
-		key := query.Args[0]
-		value := query.Args[1]
-
-		var expiryTime time.Duration = 0
-
-		for i := 2; i < len(query.Args); i++ {
-			option := strings.ToUpper(query.Args[i])
-
-			if option == "EX" || option == "PX" {
-				if i+1 >= len(query.Args) {
-					return protocol.NewResult(protocol.ErrorType, "ERR syntax error")
-				}
-
-				expStr := query.Args[i+1]
-				expVal, err := strconv.Atoi(expStr)
-				if err != nil || expVal <= 0 {
-					return protocol.NewResult(protocol.ErrorType, "ERR value is not an integer or out of range")
-				}
-
-				if option == "EX" {
-					expiryTime = time.Duration(expVal) * time.Second
-				} else {
-					expiryTime = time.Duration(expVal) * time.Millisecond
-				}
-
-				i++
-			}
-		}
-
-		store.Set(key, value, expiryTime)
-		return protocol.NewResult(protocol.SimpleStringType, OK)
+		return runSetCommand(query)
 	case GET:
-		if len(query.Args) != 1 {
-			return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'get' command")
-		}
-		key := query.Args[0]
-		value, exists := store.Get(key)
-		if !exists {
-			return protocol.NewResult(protocol.BulkStringType, "")
-		}
-		return protocol.NewResult(protocol.BulkStringType, value)
+		return runGetCommand(query)
 	default:
 		return protocol.NewResult(protocol.ErrorType, "ERR unknown command")
 	}
+}
+
+func runSetCommand(query *protocol.Query) *protocol.Result {
+	if len(query.Args) < 2 {
+		return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'SET' command")
+	}
+
+	key := query.Args[0]
+	value := query.Args[1]
+
+	var expiryTime time.Duration = 0
+
+	for i := 2; i < len(query.Args); i++ {
+		option := query.Args[i]
+
+		if option == "EX" || option == "PX" {
+			if i+1 >= len(query.Args) {
+				return protocol.NewResult(protocol.ErrorType, "ERR syntax error")
+			}
+
+			expStr := query.Args[i+1]
+			expVal, err := strconv.Atoi(expStr)
+			if err != nil || expVal <= 0 {
+				return protocol.NewResult(protocol.ErrorType, "ERR value is not an integer or out of range")
+			}
+
+			if option == "EX" {
+				expiryTime = time.Duration(expVal) * time.Second
+			} else {
+				expiryTime = time.Duration(expVal) * time.Millisecond
+			}
+
+			i++
+		}
+	}
+
+	store.Set(key, value, expiryTime)
+	return protocol.NewResult(protocol.SimpleStringType, OK)
+}
+
+func runGetCommand(query *protocol.Query) *protocol.Result {
+	if len(query.Args) != 1 {
+		return protocol.NewResult(protocol.ErrorType, "ERR wrong number of arguments for 'GET' command")
+	}
+	key := query.Args[0]
+	value, exists := store.Get(key)
+	if !exists {
+		return protocol.NewResult(protocol.BulkStringType, "")
+	}
+	return protocol.NewResult(protocol.BulkStringType, value)
 }

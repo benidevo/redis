@@ -12,13 +12,13 @@ type KeyData struct {
 }
 
 var (
-	data  = make(map[string]KeyData)
+	store = make(map[string]KeyData)
 	mutex = &sync.RWMutex{}
 )
 
 // Set stores a key-value pair in the in-memory store with an optional expiration time.
 //
-// This function adds or updates a key-value pair in the Redis-compatible in-memory data store.
+// This function adds or updates a key-value pair in the Redis-compatible in-memory store.
 // If an expiration time is provided, the key will automatically expire after the specified duration.
 func Set(key, value string, expiry time.Duration) {
 	mutex.Lock()
@@ -33,19 +33,19 @@ func Set(key, value string, expiry time.Duration) {
 		keyData.Expiration = &expiryTime
 	}
 
-	data[key] = keyData
+	store[key] = keyData
 }
 
 // Get retrieves a value from the in-memory store by its key.
 //
-// This function looks up a key in the Redis-compatible in-memory data store
+// This function looks up a key in the Redis-compatible in-memory store
 // and returns its associated value. If the key does not exist or has expired,
 // it returns an empty string and false.
 func Get(key string) (string, bool) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
-	keyData, exists := data[key]
+	keyData, exists := store[key]
 	if !exists {
 		return "", false
 	}
@@ -53,7 +53,7 @@ func Get(key string) (string, bool) {
 	if keyData.Expiration != nil && time.Now().After(*keyData.Expiration) {
 		mutex.RUnlock()
 		mutex.Lock()
-		delete(data, key)
+		delete(store, key)
 		mutex.Unlock()
 		mutex.RLock()
 		return "", false
@@ -65,13 +65,13 @@ func Get(key string) (string, bool) {
 // Delete removes a key from the store.
 //
 // This function removes a key and its associated value from the Redis-compatible
-// in-memory data store if it exists.
+// in-memory store if it exists.
 func Delete(key string) bool {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if _, exists := data[key]; exists {
-		delete(data, key)
+	if _, exists := store[key]; exists {
+		delete(store, key)
 		return true
 	}
 	return false
@@ -84,9 +84,9 @@ func CleanExpired() {
 	defer mutex.Unlock()
 
 	now := time.Now()
-	for key, keyData := range data {
+	for key, keyData := range store {
 		if keyData.Expiration != nil && now.After(*keyData.Expiration) {
-			delete(data, key)
+			delete(store, key)
 		}
 	}
 }
